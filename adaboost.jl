@@ -3,7 +3,7 @@ using CSV
 
 include("decisiontree.jl")
 
-nodes = Any
+nodes = Array{Node}
 
 function Adaboost(train, test, max_iterations = 5)
     # train x, y
@@ -18,8 +18,8 @@ function Adaboost(train, test, max_iterations = 5)
     N = size(x_train, 1)
     
     # initialize W
-    upper = trunc(Int, 1 / max_iterations )
-    x     = x_train[ 1 : upper * N ]
+    upper = 1 / max_iterations
+    x     = x_train[ 1 : trunc(Int,upper * N), : ]
     W     = [ [1 / size(x,1) for i in range(1, length=size(x,1))] for j in range(1, length=max_iterations)]
     
     for iteration in range(2, length=max_iterations)
@@ -28,7 +28,7 @@ function Adaboost(train, test, max_iterations = 5)
         
         x = x_train[1 + trunc(Int, lower * N ) : trunc(Int,upper * N) ,:]
         y = y_train[1 + trunc(Int, lower * N ) : trunc(Int,upper * N) ,:]
-        x_y_train = y = train[1 + trunc(Int, lower * N ) : trunc(Int,upper * N) ,:]
+        x_y_train = train[1 + trunc(Int, lower * N ) : trunc(Int,upper * N) ,:]
 
         #@show  Compute_Distribuiton(x_y_train, x, y, W[iteration - 1])
         W[iteration] = Compute_Distribuiton(train, x, y, W[iteration - 1])
@@ -38,20 +38,21 @@ function Adaboost(train, test, max_iterations = 5)
 end
 
 function Compute_Distribuiton(train, x_train_i, y_train_i, W_i)
+    
     # weight for iteration
     W = [1/size(x_train_i,1) for i in range(1,length=size(x_train_i,1))]
 
     # train the x_train_i dataset
     train_distribuiton(train)
-
+    
     # compute error
-    e_i     = 0.5 - 0.5 * ( sum( ( W_i[i] * y_train_i[i] * h(x_train_i[i]) ) for i in range(1,length=size(x_train_i,1)) ) )
+    e_i     = 0.5 - 0.5 * ( sum( ( W_i[i] * y_train_i[i] * h(x_train_i[i,:]) ) for i in range(1,length=size(x_train_i,1)) ) )
     
     # compute votes
     omega_i = 0.5 * log( (1 - e_i) / e_i )
 
     # update weight
-    W   = [ W_i[i] * exp( ( (-1 * y_train_i[i]) * omega_i * h(x_train_i[i]) ) for i in range(1,length=size(x_train_i,1)) ) ]
+    W   = [ W_i[i] * exp( ( (-1 * y_train_i[i]) * omega_i * h(x_train_i[i,:]) ) for i in range(1,length=size(x_train_i,1)) ) ]
 
     # normalize W
     Z_i = maximum(W)

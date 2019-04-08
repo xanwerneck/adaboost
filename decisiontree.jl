@@ -94,7 +94,7 @@ function BuildTree(S::DataFrame, NodeFrom::Node, Nodes::Array{Node}, Position::I
     push!(Nodes, node)    
 end
 
-function prediction(Test::DataFrameRow, nodes::Array{Node})
+function prediction(Test, nodes)
     node = getRoot(nodes)
     while !node.isLeaf
         if check_predict(Test[node.feature], node.mean)
@@ -105,10 +105,10 @@ function prediction(Test::DataFrameRow, nodes::Array{Node})
             node = node.nodeFalse
         end
     end
-    return unique(node.data[:,size(Test,2)])[1]
+    return unique(node.data[:,size(Test,1)])[1]
 end
 
-function getRoot(Nodes::Array{Node})
+function getRoot(Nodes)
     for node in Nodes
         if node.way == "Root"
             return node

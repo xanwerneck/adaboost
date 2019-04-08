@@ -3,9 +3,7 @@ using CSV
 
 include("decisiontree.jl")
 
-nodes = Array{Node}
-
-function Adaboost(train, test, max_iterations = 5)
+function AdaboostOld(train, test, max_iterations = 5)
     # train x, y
     x_train = train[:,1:size(train,2)-1]
     y_train = train[:,size(train,2):size(train,2)]
@@ -17,7 +15,7 @@ function Adaboost(train, test, max_iterations = 5)
     # size of DataSet
     N = size(x_train, 1)
     
-    # initialize W
+    # initialize W => equal of number of observations
     upper = 1 / max_iterations
     x     = x_train[ 1 : trunc(Int,upper * N), : ]
     W     = [ [1 / size(x,1) for i in range(1, length=size(x,1))] for j in range(1, length=max_iterations)]
@@ -37,35 +35,49 @@ function Adaboost(train, test, max_iterations = 5)
     @show W
 end
 
-function Compute_Distribuiton(train, x_train_i, y_train_i, W_i)
+function Adaboost(train, test, max_iterations = 5)
+    # size of DataSet
+    N = size(train, 1)
     
-    # weight for iteration
-    W = [1/size(x_train_i,1) for i in range(1,length=size(x_train_i,1))]
+    # initialize W => equal of number of observations
+    W = [ [1 / N for i in range(1, length=N)] for i in range(1, length=max_iterations)]
+    for iteration in range(1, length=max_iterations - 1)
+        Compute_Distribuiton(train, W, iteration)
+    end
 
-    # train the x_train_i dataset
-    train_distribuiton(train)
+    @show W
+end
+
+function Compute_Distribuiton(train, W, iteration)
     
-    # compute error
-    e_i     = 0.5 - 0.5 * ( sum( ( W_i[i] * y_train_i[i] * h(x_train_i[i,:]) ) for i in range(1,length=size(x_train_i,1)) ) )
+    # train the x_train_i dataset
+    nodes = train_distribuiton(train)
+    
+    # compute e_i
+    e_i =  sum( W[iteration][i] * is_correct( h(train[i,:],nodes), train[i,size(train, 2)] ) for i in range(1, length=size(train, 1)) )
+    e_i /= sum( W[iteration][i] for i in range(1, length=size(train, 1)) )
     
     # compute votes
     omega_i = 0.5 * log( (1 - e_i) / e_i )
-
+    @show omega_i
     # update weight
-    W   = [ W_i[i] * exp( ( (-1 * y_train_i[i]) * omega_i * h(x_train_i[i,:]) ) for i in range(1,length=size(x_train_i,1)) ) ]
-
+    W[iteration + 1] = [ W[iteration][i] * exp( (-1 * omega_i) * train[i,size(train,2)] * h(train[i,:],nodes) ) for i in range(1, length=size(train,1)) ]
+    @show W
     # normalize W
-    Z_i = maximum(W)
-    W   = [W[i] / Z_i for i in range(1,length=size(W,1))]
+    Z_i = maximum(W[iteration])
+    W[iteration + 1] = [ W[iteration + 1][i] / Z_i for i in range(1,length=size(train,1))]
+    @show W
+end
 
-    return W
+function is_correct(a, b)
+    return (a==b) ? 0 : 1
 end
 
 function train_distribuiton(train)
-    nodes = decision_tree(train)
+    return decision_tree(train)
 end
 
-function h(x)
+function h(x, nodes)
     return prediction(x, nodes)
 end
 
